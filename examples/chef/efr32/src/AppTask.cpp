@@ -22,6 +22,7 @@
 #include "AppEvent.h"
 #include "LEDWidget.h"
 #include "sl_simple_led_instances.h"
+#include "HallSensor.h"
 
 #ifdef DISPLAY_ENABLED
 #include "lcd.h"
@@ -52,6 +53,8 @@
 
 #include <platform/CHIPDeviceLayer.h>
 
+#include <app-common/zap-generated/attributes/Accessors.h>
+
 #define SYSTEM_STATE_LED &sl_led_led0
 #define APP_FUNCTION_BUTTON &sl_button_btn0
 
@@ -59,6 +62,35 @@ using namespace chip;
 using namespace ::chip::DeviceLayer;
 
 namespace {
+    
+TimerHandle_t sHallTimer;
+
+static void HallTimerEventHandler(TimerHandle_t xTimer)
+{
+    static bool state = false;
+
+    float value;
+    sl_status_t status = HallSensor::Measure(&value);
+    if (status != SL_STATUS_OK)
+    {
+        EFR32_LOG("HallSensor::Measure error = %d", status);
+        return;
+    }
+    EFR32_LOG("HallSensor::Measure value = %d", (int)(1000 * value));
+
+    if (PlatformMgr().TryLockChipStack())
+    {
+        state = !state;
+        EmberAfStatus status = app::Clusters::BooleanState::Attributes::StateValue::Set(1, state);
+        EFR32_LOG("HallTimerEventHandler status = %d", status);
+        PlatformMgr().UnlockChipStack();
+    }
+    else
+    {
+        EFR32_LOG("HallTimerEventHandler failed to lock stack");
+    }
+
+}
 
 #ifdef EMBER_AF_PLUGIN_IDENTIFY_SERVER
 EmberAfIdentifyEffectIdentifier sIdentifyEffect = EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_STOP_EFFECT;
@@ -68,7 +100,12 @@ namespace {
 #ifdef EMBER_AF_PLUGIN_IDENTIFY_SERVER
 void OnTriggerIdentifyEffectCompleted(chip::System::Layer * systemLayer, void * appState)
 {
+    ChipLogProgress(Zcl, "Trigger Identify Complete");
     sIdentifyEffect = EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_STOP_EFFECT;
+
+#if CHIP_DEVICE_CONFIG_ENABLE_SED == 1
+    AppTask::GetAppTask().StopStatusLEDTimer();
+#endif
 }
 #endif // EMBER_AF_PLUGIN_IDENTIFY_SERVER
 } // namespace
@@ -85,6 +122,9 @@ void OnTriggerIdentifyEffect(Identify * identify)
         sIdentifyEffect = static_cast<EmberAfIdentifyEffectIdentifier>(identify->mEffectVariant);
     }
 
+#if CHIP_DEVICE_CONFIG_ENABLE_SED == 1
+    AppTask::GetAppTask().StartStatusLEDTimer();
+#endif
     switch (sIdentifyEffect)
     {
     case EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_BLINK:
@@ -111,8 +151,8 @@ void OnTriggerIdentifyEffect(Identify * identify)
 #ifdef EMBER_AF_PLUGIN_IDENTIFY_SERVER
 Identify gIdentify = {
     chip::EndpointId{ 1 },
-    [](Identify *) { ChipLogProgress(Zcl, "onIdentifyStart"); },
-    [](Identify *) { ChipLogProgress(Zcl, "onIdentifyStop"); },
+    AppTask::GetAppTask().OnIdentifyStart,
+    AppTask::GetAppTask().OnIdentifyStop,
     EMBER_ZCL_IDENTIFY_IDENTIFY_TYPE_VISIBLE_LED,
     OnTriggerIdentifyEffect,
 };
@@ -135,6 +175,29 @@ CHIP_ERROR AppTask::Init()
         appError(err);
     }
 
+    // Create Timer for Hall sensor processing
+    sHallTimer = xTimerCreate("HallTmr",            // Text Name
+                               5000,                    // Default timer period (mS)
+                               true,                  // reload timer
+                               (void *) this,         // Timer context passed to handler
+                               HallTimerEventHandler // Timer callback handler
+    );
+
+    if (sHallTimer == NULL)
+    {
+        EFR32_LOG("hall timer create failed");
+        appError(APP_ERROR_CREATE_TIMER_FAILED);
+    }
+
+    if (pdPASS != xTimerStart(sHallTimer, 0))
+    {
+        EFR32_LOG("Hall Timer start failed");
+        appError(APP_ERROR_START_TIMER_FAILED);
+    }
+
+    sl_status_t status = HallSensor::Init();
+    EFR32_LOG("HallSensor::Init %d", status);
+
     return err;
 }
 
@@ -155,6 +218,9 @@ void AppTask::AppTaskMain(void * pvParameter)
         appError(err);
     }
 
+#if !(defined(CHIP_DEVICE_CONFIG_ENABLE_SED) && CHIP_DEVICE_CONFIG_ENABLE_SED)
+    sAppTask.StartStatusLEDTimer();
+#endif
     EFR32_LOG("App Task started");
 
     while (true)
@@ -168,6 +234,23 @@ void AppTask::AppTaskMain(void * pvParameter)
     }
 }
 
+void AppTask::OnIdentifyStart(Identify * identify)
+{
+    ChipLogProgress(Zcl, "onIdentifyStart");
+
+#if CHIP_DEVICE_CONFIG_ENABLE_SED == 1
+    sAppTask.StartStatusLEDTimer();
+#endif
+}
+
+void AppTask::OnIdentifyStop(Identify * identify)
+{
+    ChipLogProgress(Zcl, "onIdentifyStop");
+
+#if CHIP_DEVICE_CONFIG_ENABLE_SED == 1
+    sAppTask.StopStatusLEDTimer();
+#endif
+}
 void AppTask::ButtonEventHandler(const sl_button_t * buttonHandle, uint8_t btnAction)
 {
     if (buttonHandle == NULL)
