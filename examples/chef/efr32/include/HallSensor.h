@@ -13,6 +13,7 @@ class HallSensor
 public:
     static sl_status_t  Init();
     static sl_status_t Measure(float *value);
+    static int GetOutput();
 };
 
 #endif /* HALLSENSOR_H_ */

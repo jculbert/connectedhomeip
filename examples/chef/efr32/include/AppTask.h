@@ -93,6 +93,11 @@ public:
      */
     static void OnIdentifyStop(Identify * identify);
 
+    /**
+     * @brief To be called when the hall sensor output changes
+     */
+    static void PostHallEvent();
+
 private:
     static AppTask sAppTask;
 
