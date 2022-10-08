@@ -96,7 +96,7 @@ public:
     /**
      * @brief To be called when the hall sensor output changes
      */
-    static void PostHallEvent();
+    static void PostHallStateEvent();
 
 private:
     static AppTask sAppTask;

@@ -70,13 +70,29 @@ static I2CSPM_Init_TypeDef i2cspm_init = {
 
 static void int_callback(unsigned char intNo)
 {
-  EFR32_LOG("Hall interrupt");
-  AppTask::PostHallEvent();
+  //EFR32_LOG("Hall interrupt");
+  AppTask::PostHallStateEvent();
+}
+
+// Init hall sensor and enable sleep mode with
+// periodic readings and digital output updating
+static sl_status_t hall_init()
+{
+  sl_status_t status = sl_si7210_init(i2cspm);
+  if (status == SL_STATUS_OK)
+  {
+    sl_si7210_configure_t config = {};
+    config.threshold = 3.0;
+    config.hysteresis = config.threshold / 5.0;
+
+    // Configure sets threshold and historesis and enables sleep with periodic measurements  
+    status = sl_si7210_configure(i2cspm, &config);
+  }
+  return status;
 }
 
 sl_status_t HallSensor::Init()
 {
-  sl_status_t status;
   //status = sl_board_enable_sensor(SL_BOARD_SENSOR_HALL);
   //if (status != SL_STATUS_OK)
     //return status;
@@ -91,24 +107,20 @@ sl_status_t HallSensor::Init()
   CMU_ClockEnable(cmuClock_GPIO, true);
   I2CSPM_Init(&i2cspm_init);
 
-  // Configure sets threshold and historesis and enables sleep with periodic measurements  
-  sl_si7210_configure_t config = {};
-  status = sl_si7210_init(i2cspm);
-  if (status == SL_STATUS_OK)
-    status = sl_si7210_configure(i2cspm, &config);
-  return status;
+  return hall_init();
 }
 
 sl_status_t HallSensor::Measure(float *value)
 {
-  return sl_si7210_measure(i2cspm, 10000, value);
-  //int32_t int_value;
-  //sl_status_t status = sl_si7210_read_magfield_data_and_sltimeena(sl_i2cspm_sensor, false, &int_value);
-  //*value = int_value;
-  //return status;
+  sl_status_t status = sl_si7210_measure(i2cspm, 1000, value);
+  // Had trouble getting periodic reading to work and calling 
+  // measure to we completely init hall after a reading
+  if (status == SL_STATUS_OK)
+    status = hall_init();
+  return status;
 }
 
-int HallSensor::GetOutput()
+bool HallSensor::ContactState()
 {
-  return GPIO_PinInGet(HALL_OUTPUT_PORT, HALL_OUTPUT_PIN);
+  return GPIO_PinInGet(HALL_OUTPUT_PORT, HALL_OUTPUT_PIN) ? true: false;
 }

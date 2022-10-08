@@ -13,7 +13,10 @@ class HallSensor
 public:
     static sl_status_t  Init();
     static sl_status_t Measure(float *value);
-    static int GetOutput();
+
+    // Get output state
+    // true means "contact" is close
+    static bool ContactState();
 };
 
 #endif /* HALLSENSOR_H_ */
