@@ -55,6 +55,8 @@
 
 #include <app-common/zap-generated/attributes/Accessors.h>
 
+#include <sl_power_manager.h>
+
 #define SYSTEM_STATE_LED &sl_led_led0
 #define APP_FUNCTION_BUTTON &sl_button_btn0
 #define SET_THRESHOLD_BUTTON &sl_button_btn1
@@ -62,42 +64,140 @@
 using namespace chip;
 using namespace ::chip::DeviceLayer;
 
-namespace {
-    
-TimerHandle_t sHallTimer;
-
-static void HallEventHandler(AppEvent *event)
+//static int idleCount = 0;
+//static int idleCount2 = 0;
+extern "C" {
+extern void XXXTraceIdle()
 {
-    bool contact_closed = HallSensor::ContactState();
-    EFR32_LOG("HallSensor state = %d", contact_closed);
-
-    if (PlatformMgr().TryLockChipStack())
-    {
-        EmberAfStatus status = app::Clusters::BooleanState::Attributes::StateValue::Set(1, contact_closed);
-        EFR32_LOG("HallTimerEventHandler status = %d", status);
-        PlatformMgr().UnlockChipStack();
-    }
-    else
-    {
-        EFR32_LOG("HallTimerEventHandler failed to lock stack");
-    }
+//    ++idleCount;
+}
+extern void XXXTraceIdle2()
+{
+//    ++idleCount2;
+}
 }
 
-static void GetHallValue()
+#if 0
+#define history_len (10)
+static sl_power_manager_em_t to_history[history_len];
+static sl_power_manager_em_t from_history[history_len];
+static int history_index = 0;
+static void power_trans_callback(sl_power_manager_em_t from, sl_power_manager_em_t to)
 {
+    to_history[history_index] = to;
+    from_history[history_index] = from;
+    history_index = (history_index+1) % history_len;
+}
+
+static void log_power_trans()
+{
+    u_int32_t to = 0;
+    u_int32_t from = 0;
+    for (int i = 0; i < history_len; i++)
+    {
+        int j = (history_index + i) % history_len; 
+        to = to*10 + to_history[j];
+        from = from*10 + from_history[j];
+    }
+
+    EFR32_LOG("power hist %d %d", from, to);
+}
+#endif
+ 
+namespace {
+    
+TimerHandle_t sHallButtonTimer;
+
+static float GetHallValue()
+{
+    //EFR32_LOG("idleCount = %d %d", idleCount, idleCount2);
+    //log_power_trans();
+
+#if 0
+    TaskStatus_t tasks[10];
+    uint32_t runtime;
+
+    UBaseType_t result = uxTaskGetSystemState( tasks, 10, &runtime);
+    EFR32_LOG("Result= %d %d", result, runtime);
+    for (UBaseType_t i = 0; i < result; i++)
+    {
+        EFR32_LOG("%s %d", tasks[i].pcTaskName, tasks[i].ulRunTimeCounter);
+    }
+#endif
+
     float value;
     sl_status_t status = HallSensor::Measure(&value);
     if (status != SL_STATUS_OK)
     {
         EFR32_LOG("HallSensor::Measure error = %d", status);
-        return;
+        return 0.0;
     }
     EFR32_LOG("HallSensor::Measure value = %d", (int)(1000 * value));
+    return value;
 }
 
-static void HallTimerEventHandler(TimerHandle_t xTimer)
+static void HallStateHandler(AppEvent *event)
 {
-    GetHallValue();
+    bool contact_closed = !event->HallStateEvent.State;
+    EFR32_LOG("HallState = %d", contact_closed);
+
+    if (PlatformMgr().TryLockChipStack())
+    {
+        EmberAfStatus status = app::Clusters::BooleanState::Attributes::StateValue::Set(1, contact_closed);
+        EFR32_LOG("HallState status = %d", status);
+        PlatformMgr().UnlockChipStack();
+    }
+    else
+    {
+        EFR32_LOG("HallState failed to lock stack");
+    }
+}
+
+static void HallButtonHandler(AppEvent *event)
+{
+    // Handler for Hall button press and release
+    // -press starts a timer if not already started
+    // -if release occurs before timer expires we perform a hall measurement
+    //  and stop the button timer
+    // -if timer expires we perform a hall measurement and set the hall threshold
+    //  to the value (see HallButtonTimerHandler)
+
+    bool timerActive = xTimerIsTimerActive(sHallButtonTimer) != pdFALSE;
+
+    switch(event->Type)
+    {
+    case AppEvent::kEventType_Hall_Button_Press:
+        if (!timerActive)
+        {
+            xTimerStart(sHallButtonTimer, 0);
+        }
+        break;
+
+    case AppEvent::kEventType_Hall_Button_Release:
+        if (timerActive)
+        {
+            xTimerStop(sHallButtonTimer, 0);
+            GetHallValue();
+        }
+        break;
+        
+    default:
+        EFR32_LOG("Unknown hall button event");
+        break;
+    }
+}
+
+static void HallButtonTimerHandler(TimerHandle_t xTimer)
+{
+    static float min_threshold = 0.300;
+    float value = GetHallValue();
+    if (value < 0)
+        value = -value;
+    if (value < min_threshold)
+        value = min_threshold;
+
+    EFR32_LOG("Setting hall threshold to %d", (int)(value * 1000));
+    HallSensor::SetThreshold(value);
 }
 
 #ifdef EMBER_AF_PLUGIN_IDENTIFY_SERVER
@@ -184,29 +284,39 @@ CHIP_ERROR AppTask::Init()
     }
 
     // Create Timer for Hall sensor processing
-    sHallTimer = xTimerCreate("HallTmr",            // Text Name
+    sHallButtonTimer = xTimerCreate("HallTmr",            // Text Name
                                5000,                    // Default timer period (mS)
                                false,                  // reload timer
                                (void *) this,         // Timer context passed to handler
-                               HallTimerEventHandler // Timer callback handler
+                               HallButtonTimerHandler // Timer callback handler
     );
 
-    if (sHallTimer == NULL)
+    if (sHallButtonTimer == NULL)
     {
         EFR32_LOG("hall timer create failed");
         appError(APP_ERROR_CREATE_TIMER_FAILED);
     }
 
-#if 0
-    if (pdPASS != xTimerStart(sHallTimer, 0))
-    {
-        EFR32_LOG("Hall Timer start failed");
-        appError(APP_ERROR_START_TIMER_FAILED);
-    }
-#endif
-
     sl_status_t status = HallSensor::Init();
     EFR32_LOG("HallSensor::Init %d", status);
+
+#define EM_EVENT_MASK_ALL      (  SL_POWER_MANAGER_EVENT_TRANSITION_ENTERING_EM0 \
+                                  | SL_POWER_MANAGER_EVENT_TRANSITION_LEAVING_EM0  \
+                                  | SL_POWER_MANAGER_EVENT_TRANSITION_ENTERING_EM1 \
+                                  | SL_POWER_MANAGER_EVENT_TRANSITION_LEAVING_EM1  \
+                                  | SL_POWER_MANAGER_EVENT_TRANSITION_ENTERING_EM2 \
+                                  | SL_POWER_MANAGER_EVENT_TRANSITION_LEAVING_EM2  \
+                                  | SL_POWER_MANAGER_EVENT_TRANSITION_ENTERING_EM3 \
+                                  | SL_POWER_MANAGER_EVENT_TRANSITION_LEAVING_EM3)
+ 
+    //static sl_power_manager_em_transition_event_handle_t event_handle;
+    //static sl_power_manager_em_transition_event_info_t event_info = {
+    //    .event_mask = EM_EVENT_MASK_ALL,
+    //    .on_event = power_trans_callback,
+    //};
+ 
+    //sl_power_manager_subscribe_em_transition_event(&event_handle, &event_info);
+    sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM1);
 
     return err;
 }
@@ -235,7 +345,7 @@ void AppTask::AppTaskMain(void * pvParameter)
 
     while (true)
     {
-        BaseType_t eventReceived = xQueueReceive(sAppEventQueue, &event, pdMS_TO_TICKS(10));
+        BaseType_t eventReceived = xQueueReceive(sAppEventQueue, &event, pdMS_TO_TICKS(1000));
         while (eventReceived == pdTRUE)
         {
             sAppTask.DispatchEvent(&event);
@@ -277,9 +387,9 @@ void AppTask::ButtonEventHandler(const sl_button_t * buttonHandle, uint8_t btnAc
         // Post message to start or stop set hall threshold timer
         // If button is held for timer duration the timer will execute
         AppEvent event;
-        event.Handler            = HallEventHandler;
+        event.Handler            = HallButtonHandler;
         event.Type = btnAction == SL_SIMPLE_BUTTON_PRESSED ?
-          AppEvent::kEventType_Hall_Timer_Start : AppEvent::kEventType_Hall_Timer_Stop;
+          AppEvent::kEventType_Hall_Button_Press : AppEvent::kEventType_Hall_Button_Release;
         sAppTask.PostEvent(&event);
         return;
     }
@@ -291,10 +401,11 @@ void AppTask::ButtonEventHandler(const sl_button_t * buttonHandle, uint8_t btnAc
     }
 }
 
-void AppTask::PostHallStateEvent()
+void AppTask::PostHallStateEvent(bool state)
 {
     AppEvent event;
-    event.Type               = AppEvent::kEventType_Hall_State_Change;
-    event.Handler            = HallEventHandler;
+    event.Type                 = AppEvent::kEventType_Hall_State_Change;
+    event.HallStateEvent.State = state;
+    event.Handler              = HallStateHandler;
     sAppTask.PostEvent(&event);
 }

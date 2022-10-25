@@ -443,6 +443,7 @@ void BaseApplication::StartFunctionTimer(uint32_t aTimeoutInMs)
         CancelFunctionTimer();
     }
 
+#if 1
     // timer is not active, change its period to required value (== restart).
     // FreeRTOS- Block for a maximum of 100 ticks if the change period command
     // cannot immediately be sent to the timer command queue.
@@ -453,15 +454,18 @@ void BaseApplication::StartFunctionTimer(uint32_t aTimeoutInMs)
     }
 
     mFunctionTimerActive = true;
+#endif
 }
 
 void BaseApplication::StartStatusLEDTimer()
 {
+#if 1
     if (pdPASS != xTimerStart(sLightTimer, 0))
     {
         EFR32_LOG("Light Time start failed");
         appError(APP_ERROR_START_TIMER_FAILED);
     }
+#endif
 }
 
 void BaseApplication::StopStatusLEDTimer()

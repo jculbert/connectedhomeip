@@ -68,10 +68,12 @@ static I2CSPM_Init_TypeDef i2cspm_init = {
   .i2cClhr = SL_I2CSPM_SENSOR_HLR
 };
 
+static float threshold = 0.500;
+
 static void int_callback(unsigned char intNo)
 {
   //EFR32_LOG("Hall interrupt");
-  AppTask::PostHallStateEvent();
+  AppTask::PostHallStateEvent(HallSensor::ContactState());
 }
 
 // Init hall sensor and enable sleep mode with
@@ -82,7 +84,7 @@ static sl_status_t hall_init()
   if (status == SL_STATUS_OK)
   {
     sl_si7210_configure_t config = {};
-    config.threshold = 3.0;
+    config.threshold = threshold;
     config.hysteresis = config.threshold / 5.0;
 
     // Configure sets threshold and historesis and enables sleep with periodic measurements  
@@ -123,4 +125,10 @@ sl_status_t HallSensor::Measure(float *value)
 bool HallSensor::ContactState()
 {
   return GPIO_PinInGet(HALL_OUTPUT_PORT, HALL_OUTPUT_PIN) ? true: false;
+}
+
+bool HallSensor::SetThreshold(float _threshold)
+{
+  threshold = _threshold;
+  return hall_init();
 }

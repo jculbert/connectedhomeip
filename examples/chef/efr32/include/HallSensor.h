@@ -17,6 +17,9 @@ public:
     // Get output state
     // true means "contact" is close
     static bool ContactState();
+
+    // Set the threshold used for the output
+    static bool SetThreshold(float threshold);
 };
 
 #endif /* HALLSENSOR_H_ */
