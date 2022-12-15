@@ -30,6 +30,9 @@ struct AppEvent
         kEventType_Timer,
         kEventType_Light,
         kEventType_Install,
+        kEventType_Hall_State_Change,
+        kEventType_Hall_Button_Press,
+        kEventType_Hall_Button_Release,
     };
 
     uint16_t Type;
@@ -49,6 +52,10 @@ struct AppEvent
             uint8_t Action;
             int32_t Actor;
         } LightEvent;
+        struct
+        {
+            bool State;
+        } HallStateEvent;
     };
 
     EventHandler Handler;

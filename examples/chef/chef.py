@@ -700,6 +700,8 @@ def main() -> int:
                 efr32_cmd_args.append('\'import("//with_pw_rpc.gni")\'')
             else:
                 efr32_cmd_args.append('chip_build_libshell=true')
+            efr32_cmd_args.append('chip_openthread_ftd=false')
+            efr32_cmd_args.append('enable_sleepy_device=true')
             shell.run_cmd(" ".join(efr32_cmd_args))
             shell.run_cmd(f"cd {_CHEF_SCRIPT_PATH}")
 

@@ -129,6 +129,8 @@ extern "C" {
  * See http://www.freertos.org/a00110.html.
  *----------------------------------------------------------*/
 
+//#define traceLOW_POWER_IDLE_BEGIN() XXXTraceIdle()
+
 /* Energy saving modes. */
 #if defined(SL_CATALOG_POWER_MANAGER_PRESENT)
 #define configUSE_TICKLESS_IDLE 1
@@ -148,7 +150,10 @@ extern "C" {
 
 /* Main functions*/
 /* Run time stats gathering related definitions. */
-#define configGENERATE_RUN_TIME_STATS (0)
+#define configGENERATE_RUN_TIME_STATS (1)
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() 
+//#define portALT_GET_RUN_TIME_COUNTER_VALUE RTCC_CounterGet()
+#define portGET_RUN_TIME_COUNTER_VALUE sleeptimer_hal_get_counter
 
 /* Co-routine related definitions. */
 #define configUSE_CO_ROUTINES (0)
