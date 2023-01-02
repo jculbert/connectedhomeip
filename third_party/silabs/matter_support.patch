@@ -1,0 +1,27 @@
+diff --git a/matter/efr32/efr32mg12/BRD4166A/autogen/sl_event_handler.c b/matter/efr32/efr32mg12/BRD4166A/autogen/sl_event_handler.c
+index ffd8ccb6..12141f47 100644
+--- a/matter/efr32/efr32mg12/BRD4166A/autogen/sl_event_handler.c
++++ b/matter/efr32/efr32mg12/BRD4166A/autogen/sl_event_handler.c
+@@ -64,7 +64,7 @@ void sl_service_init(void)
+ void sl_stack_init(void)
+ {
+     sl_rail_util_pa_init();
+-    sl_rail_util_pti_init();
++    //sl_rail_util_pti_init();
+ }
+ 
+ void sl_internal_app_init(void) {}
+diff --git a/matter/efr32/efr32mg12/BRD4166A/config/sl_rail_util_pti_config.h b/matter/efr32/efr32mg12/BRD4166A/config/sl_rail_util_pti_config.h
+index e5ea09f6..2ada9efa 100644
+--- a/matter/efr32/efr32mg12/BRD4166A/config/sl_rail_util_pti_config.h
++++ b/matter/efr32/efr32mg12/BRD4166A/config/sl_rail_util_pti_config.h
+@@ -42,7 +42,8 @@
+ // <RAIL_PTI_MODE_SPI=> SPI
+ // <RAIL_PTI_MODE_DISABLED=> Disabled
+ // <i> Default: RAIL_PTI_MODE_UART
+-#define SL_RAIL_UTIL_PTI_MODE           RAIL_PTI_MODE_UART
++//#define SL_RAIL_UTIL_PTI_MODE           RAIL_PTI_MODE_UART
++#define SL_RAIL_UTIL_PTI_MODE           RAIL_PTI_MODE_DISABLED
+ 
+ // <o SL_RAIL_UTIL_PTI_BAUD_RATE_HZ> PTI Baud Rate (Hertz)
+ // <147800-20000000:1>
