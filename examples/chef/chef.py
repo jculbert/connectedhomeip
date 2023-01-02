@@ -694,12 +694,14 @@ def main() -> int:
             if sw_ver_string:
                 efr32_cmd_args.append(
                     f'\'chip_device_config_device_software_version_string=\"{sw_ver_string}\"\'')
-            efr32_cmd_args.append('enable_openthread_cli=true')
+            #efr32_cmd_args.append('enable_openthread_cli=true')
+            efr32_cmd_args.append('enable_openthread_cli=false')
             if options.do_rpc:
                 efr32_cmd_args.append('chip_build_libshell=false')
                 efr32_cmd_args.append('\'import("//with_pw_rpc.gni")\'')
             else:
                 efr32_cmd_args.append('chip_build_libshell=true')
+            #efr32_cmd_args.append('chip_build_libshell=false')
             efr32_cmd_args.append('chip_openthread_ftd=false')
             efr32_cmd_args.append('enable_sleepy_device=true')
             shell.run_cmd(" ".join(efr32_cmd_args))

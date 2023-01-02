@@ -17,6 +17,9 @@
  *    limitations under the License.
  */
 
+#include "sl_board_control.h"
+#include "sl_board_control_config.h"
+
 #include "AppTask.h"
 #include "AppConfig.h"
 #include "AppEvent.h"
@@ -296,6 +299,14 @@ CHIP_ERROR AppTask::Init()
         EFR32_LOG("hall timer create failed");
         appError(APP_ERROR_CREATE_TIMER_FAILED);
     }
+
+    sl_board_disable_sensor(SL_BOARD_SENSOR_RHT);
+    sl_board_disable_sensor(SL_BOARD_SENSOR_LIGHT);
+    sl_board_disable_sensor(SL_BOARD_SENSOR_PRESSURE);
+    //sl_board_disable_sensor(SL_BOARD_SENSOR_HALL);
+    sl_board_disable_sensor(SL_BOARD_SENSOR_GAS);
+    sl_board_disable_sensor(SL_BOARD_SENSOR_IMU);
+    sl_board_disable_sensor(SL_BOARD_SENSOR_MICROPHONE);
 
     sl_status_t status = HallSensor::Init();
     EFR32_LOG("HallSensor::Init %d", status);
