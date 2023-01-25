@@ -30,9 +30,7 @@ struct AppEvent
         kEventType_Timer,
         kEventType_Light,
         kEventType_Install,
-        kEventType_Hall_State_Change,
-        kEventType_Hall_Button_Press,
-        kEventType_Hall_Button_Release,
+        kEventType_Motion,
     };
 
     uint16_t Type;

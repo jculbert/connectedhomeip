@@ -6,16 +6,24 @@
         {
             "label": "Build chef efr",
             "type": "shell",
-            "command": "./chef.py -b -t silabs-thread -d rootnode_contactsensor_lFAGG1bfRO",
-            "group": "build",
+            //"command": "./chef.py -b -t silabs-thread -d rootnode_contactsensor_lFAGG1bfRO",
+            "command": "./chef.py -b -t silabs-thread -d rootnode_occupancysensor_iHyVgifZuo",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "problemMatcher": {
                 "base": "$gcc",
-                "fileLocation": ["relative", "${workspaceFolder}/efr32/out/rootnode_contactsensor_lFAGG1bfRO/BRD4166A"]
+                "fileLocation": [
+                    "relative",
+                    //"${workspaceFolder}/efr32/out/rootnode_contactsensor_lFAGG1bfRO/BRD4166A"
+                    "${workspaceFolder}/efr32/out/rootnode_occupancysensor_iHyVgifZuo/BRD4186C"
+                ]
             },
             "presentation": {
                 "reveal": "always",
                 "panel": "new"
             }
-       }
+        }
     ]
 }

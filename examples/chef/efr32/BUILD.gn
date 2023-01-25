@@ -187,11 +187,6 @@ efr32_executable("chef_app") {
     "src/LightingManager.cpp",
     "src/ZclCallbacks.cpp",
     "src/main.cpp",
-    "src/HallSensor.cpp",
-    "${efr32_sdk_build_root}/gecko_sdk/hardware/driver/si7210/src/sl_si7210.c",
-    "${efr32_sdk_build_root}/gecko_sdk/platform/driver/i2cspm/src/sl_i2cspm.c",
-    "${efr32_sdk_build_root}/gecko_sdk/platform/emlib/src/em_i2c.c",
-#    "${efr32_sdk_build_root}/gecko_sdk/hardware/board/src/sl_board_control_gpio.c",
   ]
 
   if (chip_enable_pw_rpc || chip_build_libshell || enable_openthread_cli ||

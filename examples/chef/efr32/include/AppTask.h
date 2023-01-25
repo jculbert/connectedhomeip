@@ -56,6 +56,11 @@ class AppTask : public BaseApplication
 {
 
 public:
+    uint32_t endpoint;
+    TimerHandle_t occupancyTimer;
+    uint32_t occupancyTimeout;
+    int occupancy;
+
     AppTask() = default;
 
     static AppTask & GetAppTask() { return sAppTask; }
@@ -93,10 +98,7 @@ public:
      */
     static void OnIdentifyStop(Identify * identify);
 
-    /**
-     * @brief To be called when the hall sensor output changes
-     */
-    static void PostHallStateEvent(bool state);
+    static void PostMotionEvent();
 
 private:
     static AppTask sAppTask;
@@ -124,4 +126,10 @@ private:
      * @param aEvent button event being processed
      */
     static void SwitchActionEventHandler(AppEvent * aEvent);
+
+    static void MotionEventHandler(AppEvent *event);
+
+    static void UpdateClusterState(intptr_t notused);
+
+    static void OccupancyTimerHandler(TimerHandle_t xTimer);
 };
