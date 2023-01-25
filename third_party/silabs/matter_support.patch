@@ -25,3 +25,16 @@ index e5ea09f6..2ada9efa 100644
  
  // <o SL_RAIL_UTIL_PTI_BAUD_RATE_HZ> PTI Baud Rate (Hertz)
  // <147800-20000000:1>
+diff --git a/matter/efr32/efr32mg24/BRD4186C/config/sl_rail_util_pti_config.h b/matter/efr32/efr32mg24/BRD4186C/config/sl_rail_util_pti_config.h
+index fca11e7b..e06ffc10 100644
+--- a/matter/efr32/efr32mg24/BRD4186C/config/sl_rail_util_pti_config.h
++++ b/matter/efr32/efr32mg24/BRD4186C/config/sl_rail_util_pti_config.h
+@@ -42,7 +42,7 @@
+ // <RAIL_PTI_MODE_SPI=> SPI
+ // <RAIL_PTI_MODE_DISABLED=> Disabled
+ // <i> Default: RAIL_PTI_MODE_UART
+-#define SL_RAIL_UTIL_PTI_MODE RAIL_PTI_MODE_UART
++#define SL_RAIL_UTIL_PTI_MODE RAIL_PTI_MODE_DISABLED
+ 
+ // <o SL_RAIL_UTIL_PTI_BAUD_RATE_HZ> PTI Baud Rate (Hertz)
+ // <147800-20000000:1>
